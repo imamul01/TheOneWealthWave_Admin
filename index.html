@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TheOneWealthWave Admin Panel</title>
+  <link rel="icon" type="image/png" href="https://cdnjs.cloudflare.com/ajax/libs/favicon-ico/1.0.0/favicon.png" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      background: #1c1f2a;
+      color: #e0e6f0;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.light-theme {
+      background: #f4f7fa; color: #2a2f4a;
+    }
+    body.light-theme nav.sidebar {
+      background: #ffffff; border-right: 1px solid #d1d9e6;
+    }
+    body.light-theme nav.sidebar header {
+      filter: none; color: #4a59a9;
+      border-bottom: 2px solid #d1d9e6;
+    }
+    body.light-theme nav.sidebar ul.menu li button {
+      color: #4a59a9;
+    }
+    body.light-theme nav.sidebar ul.menu li button:hover,
+    body.light-theme nav.sidebar ul.menu li button.active {
+      background: #e0e6ff; color: #2a2f4a;
+    }
+    body.light-theme main.content { background: #ffffff; }
+    body.light-theme .card {
+      background: #ffffff; color: #2a2f4a;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    body.light-theme table { background: #f4f7fa; }
+    body.light-theme thead { background: #4a59a9; color: white; }
+    body.light-theme input, body.light-theme select, body.light-theme textarea {
+      background: #e0e6ff; color: #333;
+    }
+    #app { display: flex; height: 100vh; overflow: hidden; }
+    nav.sidebar {
+      width: 240px; background: #24283b;
+      display: flex; flex-direction: column; border-right: 1px solid #394263;
+    }
+    nav.sidebar header {
+      padding: 20px; font-size: 22px; font-weight: bold; color: #79a3ff;
+      border-bottom: 1px solid #394263; text-align: center;
+    }
+    nav.sidebar .menu {
+      list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto;
+    }
+    .menu li { border-bottom: 1px solid #394263; }
+    .menu li button {
+      background: none; color: #bec9ff; border: none; width: 100%;
+      text-align: left; padding: 15px; cursor: pointer; font-size: 16px;
+      transition: background 0.2s;
+    }
+    .menu li button:hover, .menu li button.active {
+      background: #394a9c; color: white;
+    }
+    nav.sidebar footer {
+      padding: 15px; font-size: 14px; color: #6b768f; text-align: center;
+      border-top: 1px solid #394263;
+    }
+    main.content {
+      flex-grow: 1; background: #2a2f4a; overflow-y: auto; padding: 20px;
+      animation: fadeIn 0.5s ease-out;
+    }
+    main.content h2 {
+      margin: 0 0 20px; color: #a8b4ff; font-size: 28px; font-weight: bold;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    ::-webkit-scrollbar {
+      width: 8px; height: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4a55a2; border-radius: 4px;
+    }
+    ::-webkit-scrollbar-track { background: #24283b; }
+    .cards {
+      display: flex; gap: 15px; flex-wrap: wrap;
+    }
+    .card {
+      background: #394a9c; border-radius: 10px; flex: 1 1 200px; min-width: 200px;
+      padding: 20px; box-shadow: 0 4px 12px #4a5de9cc; color: white;
+    }
+    .card h3 {
+      margin: 0 0 10px; font-size: 18px; font-weight: bold;
+    }
+    .card .number {
+      font-size: 32px; font-weight: bold; color: #fcfcfc;
+    }
+    table {
+      width: 100%; border-collapse: collapse; margin-bottom: 20px;
+      background: #394a9caa; border-radius: 8px; overflow: hidden; color: white;
+    }
+    thead { background: #5a6dd0; }
+    thead th {
+      padding: 12px; text-align: center; font-weight: bold; font-size: 14px;
+    }
+    tbody td {
+      padding: 12px; border-top: 1px solid #5a6dd0aa; text-align: center; font-size: 14px;
+    }
+    tbody tr:hover { background: #293ea6cc; }
+    tbody tr.blocked { background: #7f1c1c99; }
+    input, select, textarea {
+      border-radius: 6px; border: none; padding: 8px; font-size: 14px;
+      background: #2a3387; color: white; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; box-shadow: 0 0 8px #4f78ffcc; background: #3441a8;
+    }
+    label { font-weight: bold; }
+    button {
+      border-radius: 6px; border: none; padding: 10px 16px; font-weight: bold;
+      color: white; font-size: 14px; cursor: pointer; transition: background 0.3s;
+    }
+    button.primary { background: #4a59a9; }
+    button.primary:hover { background: #627fe3; }
+    button.danger { background: #bf3a3a; }
+    button.danger:hover { background: #da5353; }
+    button.secondary { background: #6573bd; }
+    button.secondary:hover { background: #889ddc; }
+    button.small { padding: 6px 12px; font-size: 13px; }
+    .theme-toggle {
+      position: fixed; top: 15px; right: 15px; background: #394a9c;
+      padding: 8px; border-radius: 50%; cursor: pointer; z-index: 1000;
+    }
+    .theme-toggle img { width: 24px; height: 24px; }
+    .tabs { display: flex; margin-bottom: 15px; flex-wrap: wrap; }
+    .tab {
+      background: #283258cc; padding: 10px 15px; font-weight: bold;
+      color: #a2a9d4; cursor: pointer; margin-right: 5px; border-radius: 8px 8px 0 0;
+    }
+    .tab.active { background: #5a6cd0; color: white; }
+    form { max-width: 600px; }
+    form > div { margin-bottom: 15px; }
+    .messageBox {
+      margin-bottom: 15px; padding: 12px 15px; border-radius: 8px;
+      font-weight: bold; font-size: 14px; display: none;
+    }
+    .messageBox.success { background: #2e863d; color: #d4f5c9; }
+    .messageBox.error { background: #b13535; color: #f7c9c9; }
+    #userTreeArea {
+      max-height: 400px; overflow-y: auto; background: #394a9caa;
+      border-radius: 8px; padding: 10px; font-family: monospace; color: #dcdcdc;
+    }
+    .graph-placeholder {
+      background: #293a9c55; height: 200px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; color: #9ebbf0aa;
+      font-size: 18px; font-style: italic;
+    }
+    #loginSection {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8); display: flex; align-items: center;
+      justify-content: center; z-index: 1000;
+    }
+    .login-box {
+      background: #2a2f4a; padding: 25px; border-radius: 10px;
+      max-width: 400px; width: 100%; box-shadow: 0 4px 12px #4a5de9cc;
+    }
+    .login-box h2 { text-align: center; margin-bottom: 20px; }
+    .spinner {
+      display: none; border: 4px solid #f3f3f3; border-top: 4px solid #4a59a9;
+      border-radius: 50%; width: 30px; height: 30px;
+      animation: spin 1s linear infinite; margin: 10px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #notificationsList:empty::after {
+      content: 'No notifications available';
+      color: #9ebbf0aa; font-style: italic;
+    }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; background: #2e863d;
+      color: #d4f5c9; padding: 10px 20px; border-radius: 6px; z-index: 3000;
+      animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+      display: none;
+    }
+    .toast.error { background: #b13535; color: #f7c9c9; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; }
+    }
+    .file-upload-preview {
+      margin-top: 10px; max-height: 150px; overflow-y: auto; padding: 10px;
+      background: #394a9caa; border-radius: 8px;
+    }
+    .file-upload-preview img, .file-upload-preview video {
+      max-width: 100%; border-radius: 4px;
+    }
+    @media (max-width: 900px) {
+      nav.sidebar { width: 200px; }
+      main.content { padding: 15px; }
+    }
+    @media (max-width: 600px) {
+      #app { flex-direction: column; }
+      nav.sidebar { width: 100%; height: 60px; border-bottom: 1px solid #394263; }
+      nav.sidebar .menu { display: flex; overflow-x: auto; }
+      .menu li { border: none; flex: 0 0 auto; }
+      .menu li button { padding: 10px; font-size: 13px; }
+      main.content { height: calc(100vh - 60px); }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginSection" role="dialog" aria-label="Admin Login">
+    <div class="login-box">
+      <h2>Admin Login</h2>
+      <form id="loginForm" aria-label="Admin login form">
+        <div>
+          <label for="loginEmail">Email:</label>
+          <input type="email" id="loginEmail" required aria-required="true" placeholder="Enter email" />
+        </div>
+        <div>
+          <label for="loginPassword">Password:</label>
+          <input type="password" id="loginPassword" required aria-required="true" placeholder="Enter password" />
+        </div>
+        <button type="submit" class="primary">Login</button>
+      </form>
+      <div id="loginSpinner" class="spinner" role="status" aria-label="Loading"></div>
+      <div id="loginMessage" class="messageBox" style="margin-top: 10px;"></div>
+    </div>
+  </section>
+
+  <div class="theme-toggle" id="themeToggle" role="button" aria-label="Toggle theme">
+    <img src="https://img.icons8.com/ios-filled/50/ffffff/sun.png" alt="Toggle theme" />
+  </div>
+
+  <div id="toastContainer"></div>
+
+  <div id="app" role="application" aria-label="TheOneWealthWave Admin Panel" hidden>
+    <nav class="sidebar" aria-label="Main navigation">
+      <header>TheOneWealthWave</header>
+      <ul class="menu" role="menubar" aria-orientation="vertical" tabindex="0">
+        <li><button role="menuitem" class="active" data-tab="dashboard" aria-current="page">Dashboard</button></li>
+        <li><button role="menuitem" data-tab="users">User Management</button></li>
+        <li><button role="menuitem" data-tab="levelIncome">Level Income</button></li>
+        <li><button role="menuitem" data-tab="roi">ROI Management</button></li>
+        <li><button role="menuitem" data-tab="withdrawal">Withdrawal</button></li>
+        <li><button role="menuitem" data-tab="deposit">Deposit</button></li>
+        <li><button role="menuitem" data-tab="rewardRank">Rewards & Ranks</button></li>
+        <li><button role="menuitem" data-tab="reports">Reports</button></li>
+        <li><button role="menuitem" data-tab="contentMgmt">Content</button></li>
+        <li><button role="menuitem" data-tab="communication">Communication</button></li>
+        <li><button role="menuitem" data-tab="settings">Settings</button></li>
+        <li><button role="menuitem" data-tab="support">Support</button></li>
+        <li><button role="menuitem" data-tab="userDeposit">User Deposit</button></li>
+        <li><button role="menuitem" id="logoutBtn" class="danger">Logout</button></li>
+      </ul>
+      <footer id="sidebarFooter">© 2025 Your Company</footer>
+    </nav>
+
+    <main class="content" tabindex="0" aria-label="Main content">
+      <div id="messageBox" class="messageBox" role="alert"></div>
+      
+      <section id="dashboard" class="tab-content" role="tabpanel" aria-hidden="false">
+        <h2>Dashboard Overview</h2>
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="exportReport" class="secondary">Export Report (CSV)</button>
+          <button id="clearNotifications" class="secondary">Clear Notifications</button>
+          <button id="refreshData" class="secondary">Refresh Data</button>
+        </div>
+        <div class="cards">
+          <div class="card" role="region" aria-label="Total Members">
+            <h3>Total Members</h3>
+            <div class="number" id="totalMembers">0</div>
+          </div>
+          <div class="card" role="region" aria-label="Active Users">
+            <h3>Active Users</h3>
+            <div class="number" id="activeUsers">0</div>
+          </div>
+          <div class="card" role="region" aria-label="Today's Income">
+            <h3>Today's Income (USD)</h3>
+            <div class="number" id="todaysIncome">$0.00</div>
+          </div>
+          <div class="card" role="region" aria-label="Pending Withdrawals">
+            <h3>Pending Withdrawals</h3>
+            <div class="number" id="pendingWithdrawals">0</div>
+          </div>
+          <div class="card" role="region" aria-label="Pending Deposits">
+            <h3>Pending Deposits</h3>
+            <div class="number" id="pendingDeposits">0</div>
+          </div>
+        </div>
+        <h3>Level-wise Stats</h3>
+        <table aria-label="Level wise stats">
+          <thead><tr><th>Level</th><th>Business (USD)</th><th>Active Members</th></tr></thead>
+          <tbody id="businessStatsTableBody"></tbody>
+        </table>
+        <h3>Income Trends</h3>
+        <canvas id="incomeTrendsChart" height="200"></canvas>
+        <h3>User Growth</h3>
+        <canvas id="userGrowthChart" height="200"></canvas>
+        <h3>Notifications</h3>
+        <ul id="notificationsList" aria-live="polite" style="max-height:120px;overflow-y:auto;padding-left:20px;color:#fbc02d;"></ul>
+      </section>
+
+      <section id="users" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>User Management</h2>
+        <div style="margin-bottom: 15px; display:flex; flex-wrap:wrap; gap:12px;">
+          <input type="text" id="userSearchInput" placeholder="Search users..." aria-label="Search Users"/>
+          <button id="addUserBtn" class="primary">Add User</button>
+        </div>
+        <table aria-label="Users Table">
+          <thead><tr><th>Name</th><th>Country</th><th>Status</th><th>Join Date</th><th>KYC</th><th>Actions</th></tr></thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+        <h3>User Tree</h3>
+        <div id="userTreeArea">Loading...</div>
+      </section>
+
+      <section id="levelIncome" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Level Income</h2>
+        <div style="margin-bottom:10px;">
+          <button id="btnAddLevelIncome" class="primary">Add Level</button>
+          <button id="btnRemoveLevelIncome" class="secondary">Remove Level</button>
+          <button id="btnResetLevelIncome" class="danger">Reset</button>
+          <button id="btnSaveLevelIncome" class="primary">Save Changes</button>
+        </div>
+        <table id="levelIncomeTable" aria-label="Level Income Table">
+          <thead><tr><th>Level</th><th>Income (%)</th><th>Self Deposit ($)</th><th>Team Business ($)</th><th>Joining</th><th>Block</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="summary" aria-live="polite">
+          Total Levels: <span id="liTotalLevels">0</span> | Total Reward: <span id="liTotalRewardPercent">0%</span>
+        </div>
+      </section>
+
+      <section id="roi" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>ROI Management</h2>
+        <form id="roiSettingsForm" style="max-width:480px;">
+          <div>
+            <label for="roiPlanType">Plan Type:</label>
+            <select id="roiPlanType" aria-label="Select ROI plan type">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label for="roiPercentage">Return (%):</label>
+            <input type="number" id="roiPercentage" min="0" max="100" step="0.01" value="1.2" aria-label="Set ROI percentage" />
+          </div>
+          <div>
+            <label for="roiDuration">Duration (days):</label>
+            <input type="number" id="roiDuration" min="1" max="365" step="1" value="30" aria-label="Set ROI duration in days" />
+          </div>
+          <div>
+            <label for="roiStatus">Status:</label>
+            <select id="roiStatus" aria-label="Set ROI status">
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+          <button type="submit" class="primary">Save ROI Settings</button>
+        </form>
+        <h3>ROI History</h3>
+        <table aria-label="ROI History">
+          <thead><tr><th>Date</th><th>User</th><th>Amount ($)</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="roiHistoryBody"></tbody>
+        </table>
+      </section>
+
+      <section id="withdrawal" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Withdrawal Management</h2>
+        <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 12px;">
+          <input type="text" id="withdrawalSearchInput" placeholder="Search by user or status..." aria-label="Search Withdrawals" />
+          <button id="refreshWithdrawals" class="secondary">Refresh</button>
+        </div>
+        <table aria-label="Withdrawal Requests">
+          <thead><tr><th>User</th><th>Amount ($)</th><th>Date</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="withdrawalRequestsBody"></tbody>
+        </table>
+      </section>
+
+      <section id="deposit" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Deposit Management</h2>
+        <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 12px;">
+          <input type="text" id="depositSearchInput" placeholder="Search by user or status..." aria-label="Search Deposits" />
+          <button id="refreshDeposits" class="secondary">Refresh</button>
+        </div>
+        <table aria-label="Deposit Requests">
+          <thead><tr><th>User</th><th>Amount ($)</th><th>Date</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="depositRequestsBody"></tbody>
+        </table>
+        <h3>Deposit Methods</h3>
+        <form id="depositMethodsForm">
+          <div><label for="usdtBep20">USDT BEP20 Address:</label><input type="text" id="usdtBep20" /></div>
+          <div><label for="usdtTrc20">USDT TRC20 Address:</label><input type="text" id="usdtTrc20" /></div>
+          <div><label for="upiId">UPI ID:</label><input type="text" id="upiId" /></div>
+          <div><label for="bankDetails">Bank Details:</label><textarea id="bankDetails"></textarea></div>
+          <button type="submit" class="primary">Save Methods</button>
+        </form>
+      </section>
+
+      <section id="rewardRank" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Rewards & Ranks</h2>
+        <div style="margin-bottom:10px;">
+          <button id="btnSaveRewardRank" class="primary">Save Reward Settings</button>
+          <button id="btnAssignRewards" class="primary">Assign Rewards to Users</button>
+        </div>
+        <h3>Rank Settings</h3>
+        <form id="rankSettingsForm" style="max-width:620px;">
+          <div>
+            <label for="rankRulesText">Rank Rules:<small> (e.g., 50% team power, 50% other legs)</small></label>
+            <textarea id="rankRulesText" rows="5"></textarea>
+          </div>
+          <button type="submit" class="primary">Save Rules</button>
+        </form>
+        <h3>Reward Setup</h3>
+        <table id="rewardTable" aria-label="Reward Table">
+          <thead><tr><th>Rank</th><th>Business ($)</th><th>Power Leg ($)</th><th>Other Legs ($)</th><th>Reward ($)</th><th>Actions</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="reports" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Reports</h2>
+        <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 12px;">
+          <input type="text" id="reportSearchInput" placeholder="Search by user or date..." aria-label="Search Reports" />
+          <select id="reportDateRange" aria-label="Select date range">
+            <option value="all">All Time</option>
+            <option value="last7days">Last 7 Days</option>
+            <option value="last30days">Last 30 Days</option>
+            <option value="custom">Custom</option>
+          </select>
+          <div id="customDateRange" style="display: none;">
+            <input type="date" id="reportStartDate" aria-label="Start Date" />
+            <input type="date" id="reportEndDate" aria-label="End Date" />
+          </div>
+          <button id="refreshReports" class="secondary">Refresh</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" role="tab" aria-selected="true" id="tabReportSelfIncome">Self Income</button>
+          <button class="tab" role="tab" aria-selected="false" id="tabReportLevelIncome">Level Income</button>
+          <button class="tab" role="tab" aria-selected="false" id="tabReportReward">Reward</button>
+          <button class="tab" role="tab" aria-selected="false" id="tabReportROI">ROI</button>
+        </div>
+        <div id="reportSelfIncome" class="reportContent" role="tabpanel">
+          <canvas id="selfIncomeChart" height="200"></canvas>
+          <table aria-label="Self Income Report">
+            <thead><tr><th>User</th><th>Amount ($)</th><th>Date</th></tr></thead>
+            <tbody id="selfIncomeTableBody"></tbody>
+          </table>
+        </div>
+        <div id="reportLevelIncome" class="reportContent" role="tabpanel" hidden>
+          <canvas id="levelIncomeChart" height="200"></canvas>
+          <table aria-label="Level Income Report">
+            <thead><tr><th>Level</th><th>Amount ($)</th><th>Date</th></tr></thead>
+            <tbody id="levelIncomeTableBody"></tbody>
+          </table>
+        </div>
+        <div id="reportReward" class="reportContent" role="tabpanel" hidden>
+          <canvas id="rewardChart" height="200"></canvas>
+          <table aria-label="Reward Report">
+            <thead><tr><th>User</th><th>Rank</th><th>Reward ($)</th><th>Date</th></tr></thead>
+            <tbody id="rewardTableBody"></tbody>
+          </table>
+        </div>
+        <div id="reportROI" class="reportContent" role="tabpanel" hidden>
+          <canvas id="roiChart" height="200"></canvas>
+          <table aria-label="ROI Report">
+            <thead><tr><th>User</th><th>Amount ($)</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="roiTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="contentMgmt" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Content Management</h2>
+        <form id="contentForm" style="max-width:700px;">
+          <div>
+            <label for="termsContent">Terms:</label>
+            <textarea id="termsContent" rows="6" placeholder="Enter Terms and Conditions"></textarea>
+          </div>
+          <div>
+            <label for="aboutContent">About:</label>
+            <textarea id="aboutContent" rows="6" placeholder="Enter About Us content"></textarea>
+          </div>
+          <div>
+            <label for="faqContent">FAQ:</label>
+            <textarea id="faqContent" rows="6" placeholder="Enter FAQ content"></textarea>
+          </div>
+          <div>
+            <label for="newsContent">News:</label>
+            <textarea id="newsContent" rows="6" placeholder="Enter News content"></textarea>
+          </div>
+          <button type="submit" class="primary">Save Content</button>
+        </form>
+        <h3>Training Upload</h3>
+        <div>
+          <input type="file" id="trainingUpload" accept=".pdf,video/*" multiple aria-label="Upload training files" />
+          <div id="uploadProgress" class="spinner" style="display: none;"></div>
+          <div id="filePreview" class="file-upload-preview"></div>
+        </div>
+      </section>
+
+      <section id="communication" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Communication</h2>
+        <form id="messageForm" style="max-width:600px;">
+          <div>
+            <label for="messageTo">To:</label>
+            <select id="messageTo" aria-label="Select recipient">
+              <option value="">Select User</option>
+            </select>
+          </div>
+          <div>
+            <label for="messageType">Message Type:</label>
+            <select id="messageType" aria-label="Select message type">
+              <option value="email">Email</option>
+              <option value="sms">SMS</option>
+              <option value="telegram">Telegram</option>
+            </select>
+          </div>
+          <div>
+            <label for="messageText">Message:</label>
+            <textarea id="messageText" rows="5" placeholder="Enter your message"></textarea>
+          </div>
+          <button type="submit" class="primary">Send Message</button>
+        </form>
+        <h3>Notification Settings</h3>
+        <form id="notificationSettingsForm">
+          <div>
+            <label><input type="checkbox" id="emailNotify" checked> Email Notifications</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="smsNotify"> SMS Notifications</label>
+          </div>
+          <div>
+            <label><input type="checkbox" id="telegramBotNotify"> Telegram Notifications</label>
+          </div>
+          <div>
+            <label for="notificationFrequency">Notification Frequency:</label>
+            <select id="notificationFrequency" aria-label="Select notification frequency">
+              <option value="realtime">Real-time</option>
+              <option value="daily">Daily Digest</option>
+              <option value="weekly">Weekly Digest</option>
+            </select>
+          </div>
+          <button type="submit" class="primary">Save Notification Settings</button>
+        </form>
+      </section>
+
+      <section id="settings" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Settings</h2>
+        <form id="securitySettingsForm" style="max-width:600px;">
+          <div>
+            <label for="roleSelect">Role:</label>
+            <select id="roleSelect" aria-label="Select admin role">
+              <option value="admin">Admin</option>
+              <option value="subadmin">Sub Admin</option>
+              <option value="support">Support</option>
+            </select>
+          </div>
+          <div>
+            <label><input type="checkbox" id="enable2fa"> Enable 2FA</label>
+            <div id="qrcodeContainer" style="display: none; margin-top: 10px;">
+              <img id="qrcodeImage" alt="2FA QR Code" style="max-width: 150px;" />
+            </div>
+          </div>
+          <div>
+            <label for="passwordPolicy">Password Policy:</label>
+            <input type="text" id="passwordPolicy" value="Min 8 chars, 1 uppercase, 1 number, 1 special char" aria-label="Set password policy" />
+          </div>
+          <button type="submit" class="primary">Save Settings</button>
+        </form>
+        <h3>Activity Logs</h3>
+        <div style="margin-bottom: 15px;">
+          <input type="text" id="logSearchInput" placeholder="Search logs..." aria-label="Search Logs" />
+        </div>
+        <table aria-label="Activity Logs">
+          <thead><tr><th>Date</th><th>Admin</th><th>Action</th></tr></thead>
+          <tbody id="activityLogsBody"></tbody>
+        </table>
+      </section>
+
+      <section id="support" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>Support</h2>
+        <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 12px;">
+          <input type="text" id="ticketSearchInput" placeholder="Search by user or subject..." aria-label="Search Tickets" />
+          <select id="ticketFilterStatus" aria-label="Filter by status">
+            <option value="">All Statuses</option>
+            <option value="Open">Open</option>
+            <option value="Pending">Pending</option>
+            <option value="Closed">Closed</option>
+          </select>
+          <button id="refreshTickets" class="secondary">Refresh</button>
+        </div>
+        <table aria-label="Support Tickets">
+          <thead><tr><th>Ticket #</th><th>User</th><th>Subject</th><th>Status</th><th>Priority</th><th>Actions</th></tr></thead>
+          <tbody id="supportTicketsBody"></tbody>
+        </table>
+      </section>
+
+      <section id="userDeposit" class="tab-content" role="tabpanel" aria-hidden="true" hidden>
+        <h2>User Deposit</h2>
+        <div id="userDepositContainer"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
